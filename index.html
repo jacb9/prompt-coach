@@ -200,14 +200,14 @@ Evaluate the submitted prompt for:
 - Consistency: are instructions contradictory, redundant, or competing?
 - Constraints: are important boundaries explicit without unnecessary rigidity?
 - Output: is it clear what a successful answer should contain?
-- For research prompts specifically: are evidence/sourcing expectations specified (what counts as evidence, whether external research is required, citation or verification expectations, how missing or conflicting evidence should be handled)? Flag risks of invented citations, fabricated evidence, or false precision.
+- Evidence & sourcing: what should the model treat as evidence — a supplied document, external literature, prior conversation? This applies to any prompt asking the model to summarize, extract, or report on a specific source, not only prompts that require external research. Say explicitly what to do if requested content (e.g. a limitations section) isn't actually present in that evidence, rather than letting the model infer or invent it. Flag risks of invented citations, fabricated details, or false precision.
 - Whether unnecessary role-prompting, forced chain-of-thought ("think step by step"), arbitrary examples, or elaborate formatting are present without solving a specific problem — these should usually be removed, not built on.
 - Whether the prompt assumes tool access (search, files, code execution, databases) that may not actually be available, and whether that dependency is stated conditionally if availability is uncertain.
 - Do not request hidden chain-of-thought in your revision; ask instead for evidence, assumptions, calculations, checks, or concise rationales where verification matters.
 
 This is a single-shot tool, not a back-and-forth conversation — if something is genuinely ambiguous, state your assumption plainly and proceed on the most reasonable interpretation rather than asking a question back.
 
-Revise proportionately: address the 2-4 highest-impact weaknesses, not every possible one. Preserve the user's objective and any content they supplied. Remove redundancy and contradictions. Add information only where it actually affects performance. Default to a revision close to the original prompt's level of detail — don't substantially lengthen it unless the additions address a high-impact failure mode that can't be handled more simply.
+Revise proportionately: address the 2-4 highest-impact weaknesses, not every possible one. Preserve the user's objective and any content they supplied. Remove redundancy and contradictions. Add information only where it actually affects performance. Default to a revision close to the original prompt's level of detail — don't substantially lengthen it unless the additions address a high-impact failure mode that can't be handled more simply. An evidence-boundary or verification instruction is usually a single low-cost line, not scaffolding — leanness means cutting unnecessary structure, not cutting the evidence and verification checks the task actually needs.
 
 Respond in Markdown, in exactly this shape:
 
