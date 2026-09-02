@@ -128,7 +128,7 @@
     <div class="md" id="diag-content"></div>
   </div>
 
-  <p class="empty-hint" id="empty-hint">Pick a target model above, paste a prompt, and this runs the same checklist as the Sonnet 5 and GPT-5.6 coaching skills — grounded in Anthropic's published Sonnet 5 guidance on one side, and a lean, evidence-first GPT-5.6 coaching approach on the other.</p>
+  <p class="empty-hint" id="empty-hint">Pick a target model above, paste a prompt, and this runs the same checklist as the Sonnet 5 and GPT-5.6 coaching skills — grounded in Anthropic's published Sonnet 5 guidance on one side, and a lean, plain-language GPT-5.6 coaching approach on the other — both check your evidence and verification handling, they just push you toward different scaffolding to fix it.</p>
 
   <p class="foot">Runs through a small proxy that keeps the API key off every visitor's device, including yours.</p>
 </div>
@@ -158,6 +158,7 @@
 Draw on this checklist, applying only what's relevant to the prompt in front of you (most prompts don't need every category):
 - Clarity & directness: is the desired output specific? Would a colleague with minimal context on the task be able to follow this without confusion?
 - Context: does the prompt explain why a constraint matters, not just state it? Sonnet 5 generalizes better from a stated rationale.
+- Evidence & sourcing: does the prompt specify what evidence or sources Sonnet should use, and how to handle missing, conflicting, or unverifiable claims? The goal is a warranted answer, not just a plausible one — "do not hallucinate" isn't an instruction Sonnet can act on, visible uncertainty is. Flag prompts that would let fabricated citations or unsupported claims pass as fact.
 - Examples: would 2-5 concrete, diverse examples (in <example> tags) meaningfully reduce ambiguity about format or edge cases? Sonnet 5 leans on examples more than many models.
 - XML structure: if instructions, context, examples, and input are mixed together in one undifferentiated block, would separating them into tags help Sonnet parse the prompt unambiguously?
 - Role framing: would one sentence of role framing usefully focus tone? Don't add it reflexively where it adds nothing.
@@ -165,7 +166,7 @@ Draw on this checklist, applying only what's relevant to the prompt in front of 
 - Output format: does the prompt say what TO do rather than what NOT to do? Would naming the desired output shape in a tag help?
 - Tool use / action-taking: if the task requires Sonnet to actually take action rather than just suggest, is that made explicit? Conversely, watch for unnecessary all-caps forcing language ("CRITICAL: you MUST...") — Sonnet 5 is responsive enough to plain instructions that forcing language often causes overtriggering rather than fixing undertriggering.
 - Effort & thinking calibration: Sonnet 5 respects effort strictly, especially at low/medium, and scopes its work tightly to what was asked rather than going above and beyond. Does a genuinely complex task need an explicit cue like "this involves multistep reasoning," or does the prompt instead impose a rigid step-by-step script that fights Sonnet's own adaptive reasoning (a general "think thoroughly" instruction usually outperforms a prescribed procedure)?
-- Self-verification: for coding or quantitative tasks, would "verify your answer against [criteria] before finishing" reliably catch errors?
+- Verification before finishing: would appending "verify your answer against [criteria] before finishing" reliably catch errors? This is especially reliable for Sonnet 5 in coding and quantitative work, but is worth considering for any factual or research task where a confident, unverified claim could pass as warranted.
 - Migration hygiene: does the prompt assume unsupported behavior for Sonnet 5, like prefilled assistant responses or temperature/top_p tuning?
 
 This is a single-shot tool, not a back-and-forth conversation — if something is genuinely ambiguous, state your assumption plainly and proceed on the most reasonable interpretation rather than asking a question back.
@@ -227,7 +228,7 @@ A short paragraph on what changed and why, grounded in why GPT-5.6 specifically 
 
 Keep the whole response proportionate to the prompt's actual problems — a short, mostly-solid prompt earns a short response, not padding to fill the shape.`;
 
-  const SONNET_DIAG_REQUEST = `Now run a full diagnostic audit of the original prompt (not the revision) against this checklist: clarity & directness, context, examples, XML structure, role framing, long-context handling, output format control, tool-use/action framing, effort & thinking calibration, self-verification, migration hygiene. Only include categories actually relevant to this prompt. Respond with a Markdown table with columns: Category | Finding | Severity (Pass / Weak / N-A) | Recommendation. Keep each cell to one line.`;
+  const SONNET_DIAG_REQUEST = `Now run a full diagnostic audit of the original prompt (not the revision) against this checklist: clarity & directness, context, evidence & sourcing, examples, XML structure, role framing, long-context handling, output format control, tool-use/action framing, effort & thinking calibration, verification before finishing, migration hygiene. Only include categories actually relevant to this prompt. Respond with a Markdown table with columns: Category | Finding | Severity (Pass / Weak / N-A) | Recommendation. Keep each cell to one line.`;
 
   const GPT_DIAG_REQUEST = `Now run a formal audit of the original prompt (not the revision) against these twelve criteria, scoring only the ones relevant to this prompt: goal & intent, context, consistency, constraints, output, grounding, task structure, examples, tool fit, edge cases, privacy & integrity, efficiency. Score each relevant criterion 1-5 (1 = Poor, 5 = Exemplary), and do not treat length, complexity, role assignment, or formatting as evidence of quality on its own. Respond with a Markdown table with columns: Category | Finding | Severity | Recommendation. Keep each cell to one line.`;
 
@@ -312,13 +313,13 @@ Keep the whole response proportionate to the prompt's actual problems — a shor
     if (!resp.ok) {
       const apiMsg = data && data.error && (data.error.message || data.error) ? (data.error.message || data.error) : ('HTTP ' + resp.status);
       if (resp.status === 401) {
-        throw { friendly: 'Workshop access check failed. This link may need updating \u2014 ask the workshop host.' };
+        throw { friendly: 'Workshop access check failed. This link may need updating — ask the workshop host.' };
       }
       if (resp.status === 429) {
-        throw { friendly: 'Rate limited \u2014 wait a moment and try again.' };
+        throw { friendly: 'Rate limited — wait a moment and try again.' };
       }
       if (resp.status === 500) {
-        throw { friendly: 'The workshop server isn\u2019t configured with a key right now. Ask the workshop host.' };
+        throw { friendly: 'The workshop server isn’t configured with a key right now. Ask the workshop host.' };
       }
       throw { friendly: 'API error: ' + apiMsg };
     }
@@ -335,7 +336,7 @@ Keep the whole response proportionate to the prompt's actual problems — a shor
     els.optimizeBtn.disabled = true;
     els.resetBtn.style.display = 'none';
     els.emptyHint.style.display = 'none';
-    setStatus('<span class="spinner"></span>Thinking\u2026');
+    setStatus('<span class="spinner"></span>Thinking…');
 
     systemPrompt = mode === 'sonnet' ? SONNET_SYSTEM : GPT_SYSTEM;
     const badgeLabel = mode === 'sonnet' ? 'Claude Sonnet 5' : 'GPT-5.6';
@@ -371,7 +372,7 @@ Keep the whole response proportionate to the prompt's actual problems — a shor
   async function runDiagnostics() {
     if (messages.length === 0) return;
     els.diagBtn.disabled = true;
-    setStatus('<span class="spinner"></span>Running full diagnostic audit\u2026');
+    setStatus('<span class="spinner"></span>Running full diagnostic audit…');
     els.diagContent.innerHTML = '';
 
     const req = mode === 'sonnet' ? SONNET_DIAG_REQUEST : GPT_DIAG_REQUEST;
@@ -415,7 +416,7 @@ Keep the whole response proportionate to the prompt's actual problems — a shor
       setStatus('Copied.');
       setTimeout(() => setStatus(''), 1500);
     } catch (e) {
-      setStatus('Couldn\u2019t copy \u2014 select and copy manually.', true);
+      setStatus('Couldn’t copy — select and copy manually.', true);
     }
   });
 
