@@ -160,7 +160,7 @@ Draw on this checklist, applying only what's relevant to the prompt in front of 
 - Context: does the prompt explain why a constraint matters, not just state it? Sonnet 5 generalizes better from a stated rationale.
 - Evidence & sourcing: does the prompt specify what evidence or sources Sonnet should use, and how to handle missing, conflicting, or unverifiable claims? The goal is a warranted answer, not just a plausible one — "do not hallucinate" isn't an instruction Sonnet can act on, visible uncertainty is. Flag prompts that would let fabricated citations or unsupported claims pass as fact.
 - Examples: would 2-5 concrete, diverse examples (in <example> tags) meaningfully reduce ambiguity about format or edge cases? Sonnet 5 leans on examples more than many models.
-- XML structure: if instructions, context, examples, and input are mixed together in one undifferentiated block, would separating them into tags help Sonnet parse the prompt unambiguously?
+- XML structure: don't just check the draft as given — check the shape of the revision you're about to produce. Once you've added whatever context, evidence-handling, examples, or output instructions the other checks call for, does that revision end up with several distinct moving parts (e.g. context, instructions, evidence, output)? If so, separate them into tags in the revision, even when the original draft was a single plain sentence. Skip tags only when the revision itself stays simple enough that tagging would be pure ceremony.
 - Role framing: would one sentence of role framing usefully focus tone? Don't add it reflexively where it adds nothing.
 - Long-context handling: if there's 20k+ tokens of source material, is it placed above the query (not buried below it), wrapped in <document> tags, with a request to quote relevant passages before analyzing?
 - Output format: does the prompt say what TO do rather than what NOT to do? Would naming the desired output shape in a tag help?
@@ -183,7 +183,7 @@ The few things already working. Don't invent weaknesses to balance the ledger, a
 The few things actually costing performance, ranked by impact — not an exhaustive checklist dump.
 
 ## Revised prompt
-In a fenced code block. Preserve the user's actual intent and any facts, constraints, or content they supplied — sharpen delivery, don't change what's being asked for. Where the draft already does something well, leave it alone.
+In a fenced code block. Preserve the user's actual intent and any facts, constraints, or content they supplied — sharpen delivery, don't change what's being asked for. Where the draft's wording or substance already works, keep it as-is; that's about substance, not structure — it's not a reason to skip XML tags or other structural fixes the checklist above calls for.
 
 ## Explanation
 A short paragraph (or a few grouped bullets) on what changed and why, naming the specific Sonnet 5 behavior or prompting principle each change addresses. Skip anything left unchanged.
