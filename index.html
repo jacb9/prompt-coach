@@ -136,6 +136,7 @@
         <button class="primary" id="btn-send-followup">Send</button>
         <button class="ghost" id="btn-diagnostics">Show full diagnostic audit</button>
         <button class="ghost" id="btn-copy">Copy full conversation</button>
+        <span class="status" id="followup-status"></span>
       </div>
     </div>
   </div>
@@ -340,6 +341,7 @@ Unnecessary or contradictory instructions hurt GPT-5.6 output. Answer the six qu
     diagBtn: document.getElementById('btn-diagnostics'),
     copyBtn: document.getElementById('btn-copy'),
     emptyHint: document.getElementById('empty-hint'),
+    followupStatus: document.getElementById('followup-status'),
   };
 
   function setMode(m) {
@@ -400,9 +402,13 @@ Unnecessary or contradictory instructions hurt GPT-5.6 output. Answer the six qu
     return turn;
   }
 
-  function setStatus(msg, isErr) {
-    els.status.innerHTML = msg || '';
-    els.status.classList.toggle('err', !!isErr);
+  function setStatus(msg, isErr, target) {
+    const el = target || els.status;
+    const other = el === els.status ? els.followupStatus : els.status;
+    el.innerHTML = msg || '';
+    el.classList.toggle('err', !!isErr);
+    other.innerHTML = '';
+    other.classList.remove('err');
   }
 
   function setBusy(busy) {
@@ -421,7 +427,7 @@ Unnecessary or contradictory instructions hurt GPT-5.6 output. Answer the six qu
         headers,
         body: JSON.stringify({
           model: MODEL,
-          max_tokens: 4000,
+          max_tokens: 6000,
           system: sys,
           messages: msgs
         })
@@ -481,7 +487,7 @@ Unnecessary or contradictory instructions hurt GPT-5.6 output. Answer the six qu
       const result = await callClaude(systemPrompt, messages);
       messages.push({ role: 'assistant', content: result.text });
       addTurn('assistant', result.text);
-      setStatus(result.truncated ? 'Response was truncated.' : '');
+      setStatus(result.truncated ? 'Response was truncated — reply below with "continue" to pick up where it left off.' : '', result.truncated);
       els.followupRow.style.display = 'block';
       els.questionHint.style.display = looksLikeQuestion(result.text) ? 'block' : 'none';
       els.resetBtn.style.display = 'inline-block';
@@ -498,7 +504,7 @@ Unnecessary or contradictory instructions hurt GPT-5.6 output. Answer the six qu
     const replyText = els.followupInput.value.trim();
     if (!replyText || messages.length === 0) return;
     setBusy(true);
-    setStatus('<span class="spinner"></span>Thinking\u2026');
+    setStatus('<span class="spinner"></span>Thinking\u2026', false, els.followupStatus);
 
     addTurn('user', replyText);
     const msgsForCall = messages.concat([{ role: 'user', content: replyText }]);
@@ -507,11 +513,11 @@ Unnecessary or contradictory instructions hurt GPT-5.6 output. Answer the six qu
       const result = await callClaude(systemPrompt, msgsForCall);
       messages = msgsForCall.concat([{ role: 'assistant', content: result.text }]);
       addTurn('assistant', result.text);
-      setStatus(result.truncated ? 'Response was truncated.' : '');
+      setStatus(result.truncated ? 'Reply was truncated — send another message like "continue" to pick up where it left off.' : '', result.truncated, els.followupStatus);
       els.questionHint.style.display = looksLikeQuestion(result.text) ? 'block' : 'none';
       els.followupInput.value = '';
     } catch (err) {
-      setStatus(err.friendly || 'Something went wrong. Try again.', true);
+      setStatus(err.friendly || 'Something went wrong. Try again.', true, els.followupStatus);
     } finally {
       setBusy(false);
     }
@@ -520,7 +526,7 @@ Unnecessary or contradictory instructions hurt GPT-5.6 output. Answer the six qu
   async function runDiagnostics() {
     if (messages.length === 0) return;
     setBusy(true);
-    setStatus('<span class="spinner"></span>Running full diagnostic audit\u2026');
+    setStatus('<span class="spinner"></span>Running full diagnostic audit\u2026', false, els.followupStatus);
 
     const req = mode === 'sonnet' ? SONNET_DIAG_REQUEST : GPT_DIAG_REQUEST;
     addTurn('user', 'Show full diagnostic audit');
@@ -530,10 +536,10 @@ Unnecessary or contradictory instructions hurt GPT-5.6 output. Answer the six qu
       const result = await callClaude(systemPrompt, msgsForCall);
       messages = msgsForCall.concat([{ role: 'assistant', content: result.text }]);
       addTurn('assistant', result.text);
-      setStatus('');
+      setStatus(result.truncated ? 'Audit was truncated — send "continue" below to pick up where it left off.' : '', result.truncated, els.followupStatus);
       els.diagBtn.style.display = 'none';
     } catch (err) {
-      setStatus(err.friendly || 'Something went wrong. Try again.', true);
+      setStatus(err.friendly || 'Something went wrong. Try again.', true, els.followupStatus);
     } finally {
       setBusy(false);
     }
