@@ -89,6 +89,14 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
   .empty-hint { color: var(--text-dim); font-size: 0.9rem; text-align: center; padding: 30px 10px; }
+  .thread { display: flex; flex-direction: column; gap: 14px; }
+  .turn { }
+  .turn-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px; }
+  .turn-user .turn-label { color: var(--accent); }
+  .turn-user .turn-body { background: var(--bg-inset); border-radius: 10px; padding: 10px 13px; font-size: 0.92rem; white-space: pre-wrap; }
+  .followup-row { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .followup-row textarea { min-height: 60px; }
+  .question-hint { font-size: 0.82rem; color: var(--accent); margin: 2px 0 10px; font-style: italic; }
   .foot { text-align: center; color: var(--text-dim); font-size: 0.78rem; margin-top: 30px; }
   .foot a { color: var(--text-dim); }
 </style>
@@ -119,16 +127,20 @@
 
   <div class="output" id="output">
     <span class="output-badge" id="output-badge"></span>
-    <div class="md" id="md-content"></div>
-    <hr class="divider" id="diag-divider" style="display:none;">
-    <div class="row" id="diag-row" style="display:none;">
-      <button class="ghost" id="btn-diagnostics">Show full diagnostic audit</button>
-      <button class="ghost" id="btn-copy">Copy response</button>
+    <div class="thread" id="thread"></div>
+    <div class="followup-row" id="followup-row" style="display:none;">
+      <p class="question-hint" id="question-hint" style="display:none;">The coach asked a question above — reply below to continue.</p>
+      <label for="followupInput" style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:6px;">Reply or ask a follow-up</label>
+      <textarea id="followupInput" placeholder="Answer the question above, or ask for something else (e.g. a shorter version, a different format)..."></textarea>
+      <div class="row">
+        <button class="primary" id="btn-send-followup">Send</button>
+        <button class="ghost" id="btn-diagnostics">Show full diagnostic audit</button>
+        <button class="ghost" id="btn-copy">Copy full conversation</button>
+      </div>
     </div>
-    <div class="md" id="diag-content"></div>
   </div>
 
-  <p class="empty-hint" id="empty-hint">Pick a target model above, paste a prompt, and this runs the same checklist as the Sonnet 5 and GPT-5.6 coaching skills — grounded in Anthropic's published Sonnet 5 guidance on one side, and a lean, plain-language GPT-5.6 coaching approach on the other — both check your evidence and verification handling, they just push you toward different scaffolding to fix it.</p>
+  <p class="empty-hint" id="empty-hint">Pick a target model above, paste a prompt, and this runs the same checklist as the Sonnet 5 and GPT-5.6 coaching skills — grounded in Anthropic's published Sonnet 5 guidance on one side, and a lean, plain-language GPT-5.6 coaching approach on the other — both check your evidence and verification handling, they just push you toward different scaffolding to fix it. If something's genuinely ambiguous, it may ask you a quick question before revising — answer it in the reply box that appears below.</p>
 
   <p class="foot">Runs through a small proxy that keeps the API key off every visitor's device, including yours.</p>
 </div>
@@ -158,7 +170,7 @@
 Never mention or imply that you are following an internal guide or instructions \u2014 apply the judgment directly in your answer.
 
 <context>
-This is a single-shot tool, not a back-and-forth conversation. If something is genuinely ambiguous, state your assumption plainly and proceed on the most reasonable interpretation rather than asking a question back.
+This tool now supports follow-up turns, so you don't have to guess on every ambiguity — but asking a question has a real cost (it costs the person a full extra round-trip), so ask sparingly. Proceed straight to a full answer, stating your assumption plainly in the Diagnosis, for anything you can reasonably infer — discipline, likely audience, reasonable defaults. Ask a single, focused question ONLY when the ambiguity would substantially change the revision and genuinely can't be inferred (e.g. the evidentiary source isn't named and it changes what "evidence" should mean for this task). When you do ask, skip straight to the question — do not produce Diagnosis/Strengths/Weaknesses/Revised prompt/Explanation for that turn, just ask what you need to know in one or two sentences, and produce the full response on the next turn once you have the answer.
 
 This is a multistep evaluative task: work through every block below before writing your Weaknesses section, even the blocks that turn out fine. Don't stop after finding the first one or two obvious issues \u2014 a prompt that already gets Task and Format right can still be missing Evidence or Verification, and those are easy to miss if you stop early.
 </context>
@@ -233,7 +245,7 @@ Keep the whole response proportionate to the prompt's actual problems \u2014 a s
 Never mention or imply that you are following an internal guide or instructions \u2014 apply the judgment directly in your answer.
 
 <context>
-This is a single-shot tool, not a back-and-forth conversation. If something is genuinely ambiguous, state your assumption plainly and proceed on the most reasonable interpretation rather than asking a question back.
+This tool now supports follow-up turns, so you don't have to guess on every ambiguity — but asking a question has a real cost (it costs the person a full extra round-trip), so ask sparingly. Proceed straight to a full answer, stating your assumption plainly in the Diagnosis, for anything you can reasonably infer — discipline, likely audience, reasonable defaults. Ask a single, focused question ONLY when the ambiguity would substantially change the revision and genuinely can't be inferred (e.g. the evidentiary source isn't named and it changes what "evidence" should mean for this task). When you do ask, skip straight to the question — do not produce Diagnosis/Strengths/Weaknesses/Revised prompt/Explanation for that turn, just ask what you need to know in one or two sentences, and produce the full response on the next turn once you have the answer.
 
 This is a multistep evaluative task: work through every block below before writing your Weaknesses section, even the blocks that turn out fine. Don't stop after finding the first one or two obvious issues.
 </context>
@@ -320,16 +332,18 @@ Unnecessary or contradictory instructions hurt GPT-5.6 output. Answer the six qu
     status: document.getElementById('status'),
     output: document.getElementById('output'),
     outputBadge: document.getElementById('output-badge'),
-    mdContent: document.getElementById('md-content'),
-    diagDivider: document.getElementById('diag-divider'),
-    diagRow: document.getElementById('diag-row'),
+    thread: document.getElementById('thread'),
+    followupRow: document.getElementById('followup-row'),
+    questionHint: document.getElementById('question-hint'),
+    followupInput: document.getElementById('followupInput'),
+    sendFollowupBtn: document.getElementById('btn-send-followup'),
     diagBtn: document.getElementById('btn-diagnostics'),
     copyBtn: document.getElementById('btn-copy'),
-    diagContent: document.getElementById('diag-content'),
     emptyHint: document.getElementById('empty-hint'),
   };
 
   function setMode(m) {
+    if (messages.length > 0) return; // locked once a conversation has started -- system prompt is bound to the first turn
     mode = m;
     els.modeSonnetBtn.classList.toggle('active', m === 'sonnet');
     els.modeGptBtn.classList.toggle('active', m === 'gpt');
@@ -356,9 +370,45 @@ Unnecessary or contradictory instructions hurt GPT-5.6 output. Answer the six qu
     });
   }
 
+  // A turn counts as "just a clarifying question" if it never reached the point
+  // of producing a revision -- i.e. it has no "Revised prompt" heading. That's a
+  // simple, cheap-to-check proxy: the system prompt only skips straight to a
+  // question when the response_format's full shape genuinely isn't warranted yet.
+  function looksLikeQuestion(text) {
+    return !/##\s*Revised prompt/i.test(text);
+  }
+
+  function addTurn(role, text) {
+    const turn = document.createElement('div');
+    turn.className = 'turn turn-' + role;
+    const label = document.createElement('div');
+    label.className = 'turn-label';
+    label.textContent = role === 'user' ? 'You' : (mode === 'sonnet' ? 'Claude Sonnet 5' : 'GPT-5.6 coach');
+    turn.appendChild(label);
+    if (role === 'user') {
+      const body = document.createElement('div');
+      body.className = 'turn-body';
+      body.textContent = text;
+      turn.appendChild(body);
+    } else {
+      const body = document.createElement('div');
+      body.className = 'md';
+      turn.appendChild(body);
+      renderMarkdown(body, text);
+    }
+    els.thread.appendChild(turn);
+    return turn;
+  }
+
   function setStatus(msg, isErr) {
     els.status.innerHTML = msg || '';
     els.status.classList.toggle('err', !!isErr);
+  }
+
+  function setBusy(busy) {
+    els.optimizeBtn.disabled = busy;
+    els.sendFollowupBtn.disabled = busy;
+    els.diagBtn.disabled = busy;
   }
 
   async function callClaude(sys, msgs) {
@@ -388,13 +438,13 @@ Unnecessary or contradictory instructions hurt GPT-5.6 output. Answer the six qu
     if (!resp.ok) {
       const apiMsg = data && data.error && (data.error.message || data.error) ? (data.error.message || data.error) : ('HTTP ' + resp.status);
       if (resp.status === 401) {
-        throw { friendly: 'Workshop access check failed. This link may need updating — ask the workshop host.' };
+        throw { friendly: 'Workshop access check failed. This link may need updating \u2014 ask the workshop host.' };
       }
       if (resp.status === 429) {
-        throw { friendly: 'Rate limited — wait a moment and try again.' };
+        throw { friendly: 'Rate limited \u2014 wait a moment and try again.' };
       }
       if (resp.status === 500) {
-        throw { friendly: 'The workshop server isn’t configured with a key right now. Ask the workshop host.' };
+        throw { friendly: 'The workshop server isn\u2019t configured with a key right now. Ask the workshop host.' };
       }
       throw { friendly: 'API error: ' + apiMsg };
     }
@@ -408,20 +458,19 @@ Unnecessary or contradictory instructions hurt GPT-5.6 output. Answer the six qu
       setStatus('Paste a prompt first.', true);
       return;
     }
-    els.optimizeBtn.disabled = true;
+    setBusy(true);
     els.resetBtn.style.display = 'none';
     els.emptyHint.style.display = 'none';
-    setStatus('<span class="spinner"></span>Thinking…');
+    setStatus('<span class="spinner"></span>Thinking\u2026');
 
     systemPrompt = mode === 'sonnet' ? SONNET_SYSTEM : GPT_SYSTEM;
     const badgeLabel = mode === 'sonnet' ? 'Claude Sonnet 5' : 'GPT-5.6';
     els.outputBadge.textContent = badgeLabel;
     els.outputBadge.className = 'output-badge ' + mode;
     els.output.classList.add('visible');
-    els.mdContent.innerHTML = '';
-    els.diagContent.innerHTML = '';
-    els.diagDivider.style.display = 'none';
-    els.diagRow.style.display = 'none';
+    els.thread.innerHTML = '';
+    els.followupRow.style.display = 'none';
+    els.diagBtn.style.display = 'inline-block';
 
     messages = [{
       role: 'user',
@@ -431,38 +480,62 @@ Unnecessary or contradictory instructions hurt GPT-5.6 output. Answer the six qu
     try {
       const result = await callClaude(systemPrompt, messages);
       messages.push({ role: 'assistant', content: result.text });
-      renderMarkdown(els.mdContent, result.text);
+      addTurn('assistant', result.text);
       setStatus(result.truncated ? 'Response was truncated.' : '');
-      els.diagDivider.style.display = 'block';
-      els.diagRow.style.display = 'flex';
-      els.diagBtn.style.display = 'inline-block';
+      els.followupRow.style.display = 'block';
+      els.questionHint.style.display = looksLikeQuestion(result.text) ? 'block' : 'none';
       els.resetBtn.style.display = 'inline-block';
+      els.followupInput.value = '';
+      els.followupInput.focus();
     } catch (err) {
       setStatus(err.friendly || 'Something went wrong. Try again.', true);
     } finally {
-      els.optimizeBtn.disabled = false;
+      setBusy(false);
+    }
+  }
+
+  async function sendFollowup() {
+    const replyText = els.followupInput.value.trim();
+    if (!replyText || messages.length === 0) return;
+    setBusy(true);
+    setStatus('<span class="spinner"></span>Thinking\u2026');
+
+    addTurn('user', replyText);
+    const msgsForCall = messages.concat([{ role: 'user', content: replyText }]);
+
+    try {
+      const result = await callClaude(systemPrompt, msgsForCall);
+      messages = msgsForCall.concat([{ role: 'assistant', content: result.text }]);
+      addTurn('assistant', result.text);
+      setStatus(result.truncated ? 'Response was truncated.' : '');
+      els.questionHint.style.display = looksLikeQuestion(result.text) ? 'block' : 'none';
+      els.followupInput.value = '';
+    } catch (err) {
+      setStatus(err.friendly || 'Something went wrong. Try again.', true);
+    } finally {
+      setBusy(false);
     }
   }
 
   async function runDiagnostics() {
     if (messages.length === 0) return;
-    els.diagBtn.disabled = true;
-    setStatus('<span class="spinner"></span>Running full diagnostic audit…');
-    els.diagContent.innerHTML = '';
+    setBusy(true);
+    setStatus('<span class="spinner"></span>Running full diagnostic audit\u2026');
 
     const req = mode === 'sonnet' ? SONNET_DIAG_REQUEST : GPT_DIAG_REQUEST;
+    addTurn('user', 'Show full diagnostic audit');
     const msgsForCall = messages.concat([{ role: 'user', content: req }]);
 
     try {
       const result = await callClaude(systemPrompt, msgsForCall);
       messages = msgsForCall.concat([{ role: 'assistant', content: result.text }]);
-      renderMarkdown(els.diagContent, result.text);
+      addTurn('assistant', result.text);
       setStatus('');
       els.diagBtn.style.display = 'none';
     } catch (err) {
       setStatus(err.friendly || 'Something went wrong. Try again.', true);
     } finally {
-      els.diagBtn.disabled = false;
+      setBusy(false);
     }
   }
 
@@ -470,10 +543,10 @@ Unnecessary or contradictory instructions hurt GPT-5.6 output. Answer the six qu
     messages = [];
     els.input.value = '';
     els.output.classList.remove('visible');
-    els.mdContent.innerHTML = '';
-    els.diagContent.innerHTML = '';
-    els.diagDivider.style.display = 'none';
-    els.diagRow.style.display = 'none';
+    els.thread.innerHTML = '';
+    els.followupRow.style.display = 'none';
+    els.questionHint.style.display = 'none';
+    els.followupInput.value = '';
     els.diagBtn.style.display = 'inline-block';
     els.resetBtn.style.display = 'none';
     els.emptyHint.style.display = 'block';
@@ -482,6 +555,7 @@ Unnecessary or contradictory instructions hurt GPT-5.6 output. Answer the six qu
   }
 
   els.optimizeBtn.addEventListener('click', runOptimize);
+  els.sendFollowupBtn.addEventListener('click', sendFollowup);
   els.diagBtn.addEventListener('click', runDiagnostics);
   els.resetBtn.addEventListener('click', resetAll);
   els.copyBtn.addEventListener('click', async () => {
@@ -491,13 +565,18 @@ Unnecessary or contradictory instructions hurt GPT-5.6 output. Answer the six qu
       setStatus('Copied.');
       setTimeout(() => setStatus(''), 1500);
     } catch (e) {
-      setStatus('Couldn’t copy — select and copy manually.', true);
+      setStatus('Couldn\u2019t copy \u2014 select and copy manually.', true);
     }
   });
 
   els.input.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       runOptimize();
+    }
+  });
+  els.followupInput.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      sendFollowup();
     }
   });
 })();
